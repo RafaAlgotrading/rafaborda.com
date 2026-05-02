@@ -447,7 +447,7 @@ body { font-family: var(--display); background: var(--bg); color: var(--text); m
 <body>
 
 <!-- LOGIN SCREEN -->
-<div class="login-screen" id="login-screen">
+<div class="login-screen hidden" id="login-screen">
   <div class="login-bg-glow"></div>
   <div class="login-box">
     <div class="login-logo">
@@ -1302,32 +1302,34 @@ async function loadUserProfile(authUser) {
 }
 
 // ─── INIT AUTH ───────────────────────────────────────────────────
-// onAuthStateChange solo maneja SIGNED_IN y SIGNED_OUT explícitos
 sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'INITIAL_SESSION') {
+    // Se dispara siempre al cargar la página, con o sin sesión
+    if (session) {
+      appInitialized = true;
+      hideLoginScreen();
+      await loadUserProfile(session.user);
+      await loadAll();
+    } else {
+      showLoginScreen();
+    }
+    return;
+  }
+
   if (event === 'SIGNED_IN') {
     if (appInitialized) return;
     appInitialized = true;
     hideLoginScreen();
     await loadUserProfile(session.user);
     await loadAll();
-  } else if (event === 'SIGNED_OUT') {
+    return;
+  }
+
+  if (event === 'SIGNED_OUT') {
     appInitialized = false;
     showLoginScreen();
   }
 });
-
-// Carga inicial: chequear sesión existente directamente
-(async () => {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) {
-    showLoginScreen();
-  } else {
-    appInitialized = true;
-    hideLoginScreen();
-    await loadUserProfile(session.user);
-    await loadAll();
-  }
-})();
 
 // ─── USER PANEL ──────────────────────────────────────────────────
 function initUserPanel() {
